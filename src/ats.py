@@ -1,6 +1,7 @@
 import re
 
 
+# Regex patterns used to detect common resume sections.
 SECTION_PATTERNS = {
     "Contact": [
         r"\bcontact\b",
@@ -49,8 +50,10 @@ SECTION_PATTERNS = {
 
 
 def check_contact_information(text):
+    # Lowercase text makes regex matching case-insensitive.
     text = text.lower()
 
+    # Regex is used to detect common contact information patterns.
     email = bool(
         re.search(
             r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
@@ -90,6 +93,7 @@ def check_contact_information(text):
 def detect_sections(text):
     text = text.lower()
 
+    # Check whether at least one regex pattern exists for each section.
     return {
         section: any(
             re.search(pattern, text)
@@ -100,6 +104,7 @@ def detect_sections(text):
 
 
 def analyze_length(text):
+    # Count words using a regex pattern.
     word_count = len(re.findall(r"\b\w+\b", text))
 
     if word_count < 150:
@@ -123,6 +128,7 @@ def keyword_coverage(resume_text, jd_skills):
 
     resume_text = resume_text.lower()
 
+    # Count JD skills that appear directly in the resume.
     matched = sum(
         bool(
             re.search(
@@ -142,6 +148,7 @@ def keyword_analysis(resume_text, jd_skills):
     matched = []
     missing = []
 
+    # Separate JD keywords into matched and missing groups.
     for skill in jd_skills:
         pattern = (
             rf"(?<![a-z0-9+#]){re.escape(skill.lower())}"
@@ -174,17 +181,20 @@ def calculate_ats_score(
         "Projects"
     ]
 
+    # Calculate the percentage of important resume sections detected.
     section_score = (
         sum(sections.get(x, False) for x in important_sections)
         / len(important_sections)
         * 100
     )
 
+    # Calculate the percentage of contact details detected.
     contact_score = (
         sum(contact.values()) / len(contact) * 100
         if contact else 0
     )
 
+    # Convert resume length status into a numeric score.
     length_score = {
         "Good": 100,
         "Long": 80,
@@ -192,6 +202,7 @@ def calculate_ats_score(
         "Very long": 55
     }.get(length["status"], 0)
 
+    # Weighted ATS score.
     score = (
         keyword_score * 0.50
         + section_score * 0.25
@@ -206,6 +217,7 @@ def analyze_ats(resume_text, jd_skills):
     sections = detect_sections(resume_text)
     contact = check_contact_information(resume_text)
     length = analyze_length(resume_text)
+
     keyword_score = keyword_coverage(
         resume_text,
         jd_skills
