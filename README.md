@@ -63,7 +63,7 @@ Punctuation Removal
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature              | Description                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------- |
@@ -81,7 +81,7 @@ Punctuation Removal
 
 ---
 
-## 🧠 NLP Techniques
+## NLP Techniques
 
 | NLP Technique       | Application in ResumeMatch                          |
 | ------------------- | --------------------------------------------------- |
@@ -98,7 +98,7 @@ Punctuation Removal
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Category            | Library / Technology  |
 | ------------------- | --------------------- |
