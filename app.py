@@ -824,19 +824,17 @@ if related:
         unsafe_allow_html=True
     )
 
-    related_rows = "".join(
-        [
-            f'''
-            <div class="status-row">
-                <span class="status-name">{r_skill}</span>
-                <span class="status-pill status-present">
-                    Related to {j_skill}
-                </span>
-            </div>
-            '''
-            for r_skill, j_skill in related
-        ]
-    )
+    related_rows = ""
+
+    for r_skill, j_skill in related:
+        related_rows += (
+            f'<div class="status-row">'
+            f'<span class="status-name">{r_skill}</span>'
+            f'<span class="status-pill status-present">'
+            f'Related to {j_skill}'
+            f'</span>'
+            f'</div>'
+        )
 
     st.markdown(
         f'''
@@ -845,12 +843,13 @@ if related:
             <div class="panel-description">
                 Related technologies detected in your resume.
             </div>
-            {related_rows}
+            <div style="margin-top:10px;">
+                {related_rows}
+            </div>
         </div>
         ''',
         unsafe_allow_html=True
     )
-
 
 st.markdown(
     '<div class="section-header">'
