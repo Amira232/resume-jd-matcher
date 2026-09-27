@@ -63,7 +63,7 @@ def check_contact_information(text):
 
     phone = bool(
         re.search(
-            r"(?<!\d)(?:\+91[-\s]?)?[6-9]\d{9}(?!\d)",
+            r"(?<!\d)(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}(?!\d)",
             text
         )
     )
