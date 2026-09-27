@@ -10,7 +10,7 @@ Recruiters and applicants need to compare resumes with job descriptions to ident
 
 ## 🚀 Live Demo
 
-**[Try ResumeMatch](https://resume-jd-matcher-dpr2lnum9nlnftkjt7xism.streamlit.app/)**
+**[Try ResumeMatch](https://f7uagsbx63iaztgy9dendx.streamlit.app/)**
 
 ---
 
