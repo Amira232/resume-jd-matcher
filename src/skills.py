@@ -3,82 +3,81 @@ import re
 from pathlib import Path
 
 
-# Load the configured skill database from JSON.
 SKILL_FILE = (
     Path(__file__).resolve().parent.parent
     / "data"
     / "skills.json"
 )
 
-with open(
-    SKILL_FILE,
-    "r",
-    encoding="utf-8"
-) as file:
+with open(SKILL_FILE, "r", encoding="utf-8") as file:
     SKILL_DATA = json.load(file)
 
 
+EXCLUDED_SKILLS = {
+    "teamwork"
+}
+
+
 def normalize_text(text):
-    # Normalize text so skill matching is more consistent.
     if not text:
         return ""
 
     text = text.lower()
 
-    # Normalize different dash characters.
     text = text.replace("–", "-")
     text = text.replace("—", "-")
-
-    # Normalize common separators.
     text = text.replace("•", " ")
     text = text.replace("|", " ")
 
-    # Replace multiple spaces with a single space.
-    text = re.sub(
-        r"\s+",
-        " ",
-        text
-    )
+    # Treat REST API variations as the same term.
+    text = re.sub(r"\brestful\s+apis?\b", "rest api", text)
+    text = re.sub(r"\brest\s+apis?\b", "rest api", text)
+
+    text = re.sub(r"\s+", " ", text)
 
     return text.strip()
 
 
-def build_pattern(term):
-    # Escape special regex characters before searching for a skill.
-    term = normalize_text(term)
-    escaped = re.escape(term)
+def normalize_skill(skill):
+    return normalize_text(skill)
 
-    # Boundaries prevent partial matches inside unrelated words.
+
+def build_pattern(term):
+    term = normalize_text(term)
+
     return (
         r"(?<![a-z0-9+#])"
-        + escaped
+        + re.escape(term)
         + r"(?![a-z0-9+#])"
     )
 
 
+def is_excluded(skill):
+    return normalize_skill(skill) in EXCLUDED_SKILLS
+
+
 def extract_skills(text):
-    # Detect canonical skills using the configured skill database.
     normalized = normalize_text(text)
+
+    if not normalized:
+        return {}
 
     found = {}
 
-    if not normalized:
-        return found
-
     for category, skills in SKILL_DATA.items():
         for canonical_name, aliases in skills.items():
-            possible_terms = [
-                canonical_name
-            ] + aliases
+
+            if is_excluded(canonical_name):
+                continue
+
+            possible_terms = [canonical_name] + aliases
 
             for term in possible_terms:
-                if not term:
+                if not term or is_excluded(term):
                     continue
 
-                pattern = build_pattern(term)
-
                 if re.search(
-                    pattern,
+                    build_pattern(term),
                     normalized
                 ):
                     found[canonical_name] = category
@@ -88,26 +87,18 @@ def extract_skills(text):
 
 
 def get_skill_list(text):
-    # Return detected skills in alphabetical order.
-    skills = extract_skills(text)
-
     return sorted(
-        skills.keys(),
+        extract_skills(text).keys(),
         key=str.lower
     )
 
 
 def get_skills_by_category(text):
-    # Group detected skills according to their categories.
     detected = extract_skills(text)
-
     grouped = {}
 
     for skill, category in detected.items():
-        grouped.setdefault(
-            category,
-            []
-        ).append(skill)
+        grouped.setdefault(category, []).append(skill)
 
     for category in grouped:
         grouped[category] = sorted(
@@ -123,8 +114,6 @@ def get_skills_by_category(text):
     )
 
 
-# Related skills help identify technologies that are connected
-# even when the exact JD skill is not directly present.
 RELATED_SKILLS = {
     "JavaScript": {"TypeScript"},
     "TypeScript": {"JavaScript"},
@@ -142,62 +131,94 @@ RELATED_SKILLS = {
 
     "PostgreSQL": {"MySQL", "SQLite"},
     "MySQL": {"PostgreSQL", "SQLite"},
+
     "MongoDB": {"Redis"},
     "Redis": {"MongoDB"},
 
     "Machine Learning": {"Scikit-learn", "Python"},
     "Scikit-learn": {"Machine Learning", "Python"},
+
     "Deep Learning": {"TensorFlow", "PyTorch"},
     "TensorFlow": {"Deep Learning", "Python"},
     "PyTorch": {"Deep Learning", "Python"},
-    "Natural Language Processing": {"Machine Learning", "Deep Learning"},
+
+    "Natural Language Processing": {
+        "Machine Learning",
+        "Deep Learning"
+    },
+
     "Computer Vision": {"Deep Learning"},
-    "Generative AI": {"Large Language Models", "Transformers"},
-    "Large Language Models": {"Generative AI", "Transformers"},
-    "Transformers": {"Large Language Models", "Generative AI"},
+
+    "Generative AI": {
+        "Large Language Models",
+        "Transformers"
+    },
+
+    "Large Language Models": {
+        "Generative AI",
+        "Transformers"
+    },
+
+    "Transformers": {
+        "Large Language Models",
+        "Generative AI"
+    },
 
     "GitHub": {"Git"},
     "Kubernetes": {"Docker"},
     "Docker": {"Kubernetes"},
-    "CI/CD": {"GitHub", "Git"},
+    "CI/CD": {"GitHub", "Git"}
 }
 
 
 def compare_skills(resume_skills, jd_skills):
-    # Convert lists to sets for efficient skill comparison.
-    resume_set = set(resume_skills)
-    jd_set = set(jd_skills)
+    resume_map = {
+        normalize_skill(skill): skill
+        for skill in resume_skills
+        if not is_excluded(skill)
+    }
 
-    # Exact skill matches are the intersection of both sets.
+    jd_map = {
+        normalize_skill(skill): skill
+        for skill in jd_skills
+        if not is_excluded(skill)
+    }
+
+    matched_keys = set(resume_map) & set(jd_map)
+
     matched = sorted(
-        resume_set.intersection(jd_set),
+        [jd_map[key] for key in matched_keys],
         key=str.lower
     )
 
-    # Skills required by the JD but not directly found in the resume.
     missing_candidates = sorted(
-        jd_set - resume_set,
+        set(jd_map) - set(resume_map),
         key=str.lower
     )
+
+    related_map = {
+        normalize_skill(key): {
+            normalize_skill(value)
+            for value in values
+        }
+        for key, values in RELATED_SKILLS.items()
+    }
 
     related = []
     missing = []
 
     for jd_skill in missing_candidates:
-        related_resume_skill = None
-
-        possible_related = RELATED_SKILLS.get(
-            jd_skill,
+        jd_key = normalize_skill(jd_skill)
+        possible_related = related_map.get(
+            jd_key,
             set()
         )
 
-        # Check whether a related technology exists in the resume.
-        for possible_skill in sorted(
-            possible_related,
-            key=str.lower
-        ):
-            if possible_skill in resume_set:
-                related_resume_skill = possible_skill
+        related_resume_skill = None
+
+        for resume_key, resume_skill in resume_map.items():
+            if resume_key in possible_related:
+                related_resume_skill = resume_skill
                 break
 
         if related_resume_skill:
@@ -210,30 +231,25 @@ def compare_skills(resume_skills, jd_skills):
         else:
             missing.append(jd_skill)
 
-    return (
-        matched,
-        related,
-        missing
-    )
+    return matched, related, missing
 
 
 def get_skill_category(skill):
-    # Find the category assigned to a canonical skill.
     for category, skills in SKILL_DATA.items():
-        if skill in skills:
-            return category
+        for canonical_name in skills:
+            if normalize_skill(canonical_name) == normalize_skill(skill):
+                return category
 
     return None
 
 
 def get_all_skills():
-    # Return every canonical skill from the skill database.
     skills = []
 
-    for category, category_skills in SKILL_DATA.items():
-        skills.extend(
-            category_skills.keys()
-        )
+    for category_skills in SKILL_DATA.values():
+        for skill in category_skills:
+            if not is_excluded(skill):
+                skills.append(skill)
 
     return sorted(
         skills,
