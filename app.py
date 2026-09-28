@@ -542,15 +542,18 @@ if analyze_button:
             icon="✅"
         )
 
-    except Exception as error:
+    except ValueError as error:
+        st.warning(
+            str(error),
+            icon="⚠️"
+        )
+        st.stop()
+
+    except Exception:
         st.error(
-            "Analysis failed. Please check the uploaded file and try again.",
+            "Analysis could not be completed. Please check the uploaded file and try again.",
             icon="❌"
         )
-
-        with st.expander("Technical details"):
-            st.exception(error)
-
         st.stop()
 
 
@@ -828,28 +831,31 @@ if related:
 
     for r_skill, j_skill in related:
         related_rows += (
-            f'<div class="status-row">'
+            '<div class="status-row">'
             f'<span class="status-name">{r_skill}</span>'
             f'<span class="status-pill status-present">'
             f'Related to {j_skill}'
-            f'</span>'
-            f'</div>'
+            '</span>'
+            '</div>'
         )
 
+    related_panel = (
+        '<div class="panel">'
+        '<div class="panel-title">Related skills</div>'
+        '<div class="panel-description">'
+        'Related technologies detected in your resume.'
+        '</div>'
+        '<div style="margin-top:10px;">'
+        + related_rows +
+        '</div>'
+        '</div>'
+    )
+
     st.markdown(
-        f'''
-        <div class="panel">
-            <div class="panel-title">Related skills</div>
-            <div class="panel-description">
-                Related technologies detected in your resume.
-            </div>
-            <div style="margin-top:10px;">
-                {related_rows}
-            </div>
-        </div>
-        ''',
+        related_panel,
         unsafe_allow_html=True
     )
+
 
 st.markdown(
     '<div class="section-header">'
