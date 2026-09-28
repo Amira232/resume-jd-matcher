@@ -1,24 +1,29 @@
 from src.skills import get_skill_list, compare_skills
-from src.similarity import calculate_bow_similarity, calculate_tfidf_similarity, calculate_semantic_similarity
+from src.similarity import (
+    calculate_bow_similarity,
+    calculate_tfidf_similarity,
+    calculate_semantic_similarity
+)
 from src.ats import analyze_ats
 
 
 def analyze(resume_text, jd_text):
-    # Extract skills from the resume and job description.
     resume_skills = get_skill_list(resume_text)
     jd_skills = get_skill_list(jd_text)
 
-    # Compare skills to find exact matches, related skills and missing skills.
     matched, related, missing = compare_skills(
         resume_skills,
         jd_skills
     )
 
-    # Skill coverage = percentage of JD skills found directly in the resume.
-    coverage = len(matched) / len(jd_skills) * 100 if jd_skills else 0
+    coverage = (
+        len(matched) / len(jd_skills) * 100
+        if jd_skills
+        else 0
+    )
+
     coverage = round(coverage, 1)
 
-    # Calculate similarity using different NLP/vectorization techniques.
     bow_score = calculate_bow_similarity(
         resume_text,
         jd_text
@@ -34,20 +39,17 @@ def analyze(resume_text, jd_text):
         jd_text
     )
 
-    # Overall score combines skill coverage, semantic similarity and TF-IDF.
     alignment = (
         coverage * 0.50
         + semantic_score * 0.35
         + tfidf_score * 0.15
     )
 
-    # Keep the final score between 0 and 100.
     alignment = round(
         max(0, min(100, alignment)),
         1
     )
 
-    # Perform ATS checks for resume structure, keywords, contact and length.
     ats = analyze_ats(
         resume_text,
         jd_skills
@@ -67,7 +69,10 @@ def analyze(resume_text, jd_text):
             "explicit in relevant projects or experience."
         )
 
-    keyword_data = ats.get("keyword_analysis", {})
+    keyword_data = ats.get(
+        "keyword_analysis",
+        {}
+    )
 
     if keyword_data.get("missing"):
         suggestions.append(
@@ -82,7 +87,10 @@ def analyze(resume_text, jd_text):
         "Projects"
     ]
 
-    sections = ats.get("sections", {})
+    sections = ats.get(
+        "sections",
+        {}
+    )
 
     missing_sections = [
         section
@@ -97,7 +105,10 @@ def analyze(resume_text, jd_text):
             + "."
         )
 
-    contact = ats.get("contact", {})
+    contact = ats.get(
+        "contact",
+        {}
+    )
 
     contact_fields = {
         "email": "Email",
@@ -119,7 +130,10 @@ def analyze(resume_text, jd_text):
             + "."
         )
 
-    length = ats.get("length", {})
+    length = ats.get(
+        "length",
+        {}
+    )
 
     if length.get("status") != "Good":
         suggestions.append(
