@@ -1,5 +1,5 @@
 import re
-
+from src.skills import normalize_text, normalize_skill
 
 # Regex patterns used to detect common resume sections.
 SECTION_PATTERNS = {
@@ -63,7 +63,7 @@ def check_contact_information(text):
 
     phone = bool(
         re.search(
-            r"(?:\+91[\s-]?)?[6-9]\d{4}[\s-]?\d{5}",
+            r"(?<!\d)(?:\+91[\s.-]*)?(?:[6-9]\d{4}[\s.-]*\d{5})(?!\d)",
             text
         )
     )
@@ -91,7 +91,7 @@ def check_contact_information(text):
 
 
 def detect_sections(text):
-    text = text.lower()
+    text = normalize_text(text)
 
     # Check whether at least one regex pattern exists for each section.
     return {
@@ -123,28 +123,33 @@ def analyze_length(text):
 
 
 def keyword_coverage(resume_text, jd_skills):
+    resume_text = normalize_text(resume_text)
+
     if not jd_skills:
         return 0
 
-    resume_text = resume_text.lower()
+    matched = 0
 
-    # Count JD skills that appear directly in the resume.
-    matched = sum(
-        bool(
-            re.search(
-                rf"(?<![a-z0-9+#]){re.escape(skill.lower())}"
-                r"(?![a-z0-9+#])",
-                resume_text
-            )
+    for skill in jd_skills:
+        pattern = (
+            r"(?<![a-z0-9+#])"
+            + re.escape(normalize_skill(skill))
+            + r"(?![a-z0-9+#])"
         )
-        for skill in jd_skills
+
+        if re.search(pattern, resume_text):
+            matched += 1
+
+    return round(
+        matched / len(jd_skills) * 100
     )
 
     return round(matched / len(jd_skills) * 100)
 
 
 def keyword_analysis(resume_text, jd_skills):
-    resume_text = resume_text.lower()
+    resume_text = normalize_text(resume_text)
+    
     matched = []
     missing = []
 
